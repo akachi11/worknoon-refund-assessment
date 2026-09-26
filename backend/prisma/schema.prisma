@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  orders         Order[]
+  refundRequests RefundRequest[]
+
+  @@map("customers")
+}
+
+enum OrderStatus {
+  delivered
+  in_transit
+  returned
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  customerId String
+  orderDate  DateTime
+  total      Decimal     @db.Decimal(10, 2)
+  status     OrderStatus
+  createdAt  DateTime    @default(now())
+
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  items          OrderItem[]
+  refundRequests RefundRequest[]
+
+  @@index([customerId])
+  @@map("orders")
+}
+
+enum ListingCondition {
+  new
+  open_box
+  refurbished
+  clearance
+}
+
+enum VerifiedIssue {
+  none
+  damaged_in_transit
+  wrong_item_shipped
+  missing_item
+}
+
+model OrderItem {
+  id               String           @id @default(uuid())
+  orderId          String
+  sku              String
+  name             String
+  price            Decimal          @db.Decimal(10, 2)
+  listingCondition ListingCondition @default(new)
+  verifiedIssue    VerifiedIssue    @default(none)
+
+  order          Order           @relation(fields: [orderId], references: [id])
+  refundRequests RefundRequest[]
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+enum FinalDecision {
+  APPROVED
+  DENIED
+  ESCALATED
+}
+
+model RefundRequest {
+  id            String        @id @default(uuid())
+  customerId    String
+  orderId       String
+  orderItemId   String
+  message       String
+  policyOutput  Json
+  aiOutput      Json?
+  finalDecision FinalDecision
+  reasoning     String
+  createdAt     DateTime      @default(now())
+
+  customer  Customer   @relation(fields: [customerId], references: [id])
+  order     Order      @relation(fields: [orderId], references: [id])
+  orderItem OrderItem  @relation(fields: [orderItemId], references: [id])
+  auditLogs AuditLog[]
+
+  @@index([customerId])
+  @@index([orderId])
+  @@index([orderItemId])
+  @@map("refund_requests")
+}
+
+enum AuditActor {
+  policy_engine
+  ai_openai
+  ai_gemini
+  system
+}
+
+model AuditLog {
+  id              String     @id @default(uuid())
+  refundRequestId String
+  actor           AuditActor
+  action          String
+  detail          Json
+  createdAt       DateTime   @default(now())
+
+  refundRequest RefundRequest @relation(fields: [refundRequestId], references: [id])
+
+  @@index([refundRequestId])
+  @@map("audit_logs")
+}

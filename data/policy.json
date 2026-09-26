@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-09-26",
+  "refundWindowDays": 30,
+  "highValueThreshold": 500.00,
+  "aiConfidenceThreshold": 0.6,
+  "rateLimiting": {
+    "maxRequestsPerCustomerPerWindow": 3,
+    "windowHours": 24
+  },
+  "nonRefundableListingConditions": ["clearance"],
+  "eligibleVerifiedIssues": ["damaged_in_transit", "wrong_item_shipped", "missing_item"],
+  "rules": [
+    {
+      "id": "final_sale_exclusion",
+      "hardRule": true,
+      "summary": "Items listed as clearance (sold as-is, at a disclosed markdown) are not eligible for refund. This is a listing-time fact, not a judgment call."
+    },
+    {
+      "id": "refund_window",
+      "hardRule": true,
+      "summary": "Refund requests must be submitted within 30 days of the order date. Requests outside this window are denied regardless of reason."
+    },
+    {
+      "id": "high_value_review",
+      "hardRule": true,
+      "summary": "Refund requests for orders totaling more than $500 always require human review before being finalized, regardless of how eligible the request otherwise looks."
+    },
+    {
+      "id": "damaged_incorrect_eligible",
+      "hardRule": false,
+      "summary": "Items with a verified issue (damaged in transit, wrong item shipped, or missing item) are eligible for refund approval, subject to AI-assisted review of the customer's account of what happened."
+    },
+    {
+      "id": "suspicious_escalation",
+      "hardRule": false,
+      "summary": "Requests where the customer's claim contradicts verified order/item facts (e.g. claiming an item arrived damaged when no issue is on file, or claiming non-delivery when the order status shows delivered), or where a customer has filed repeated requests in a short window, are escalated for human review rather than auto-decided."
+    }
+  ]
+}
