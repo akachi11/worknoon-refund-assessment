@@ -2,7 +2,7 @@
 
 An AI-assisted refund decision system for e-commerce customer support. A customer describes what happened with an order; a deterministic policy engine and an AI classifier (Gemini, with OpenAI as an optional fallback) work together to approve, deny, or escalate the request — with every step of that reasoning logged for an admin to review.
 
-Built for the WORKNOON Full Stack AI Integration Product Challenge.
+Built for the WORKNOON Full Stack AI Integration Product Challenge, developed collaboratively with [Claude Code](https://claude.com/claude-code).
 
 ## Quick start
 
@@ -163,6 +163,15 @@ Decisions made along the way, and why:
 - **OpenAI fallback is fully implemented but disabled by default** (`AI_FALLBACK_ENABLED=false`), since exercising it costs real money and Gemini's free tier covers development and demo needs. Flipping it on requires only an env var change, no code changes.
 - **The HTTP-level rate limiter** (`express-rate-limit`, per-IP) **and the policy engine's `repeated_requests` signal are two different things on purpose** — the former is a blunt anti-flood measure at the network layer; the latter is a business-logic signal about a specific customer's refund-request pattern, evaluated per-customer regardless of IP.
 - **Model names for fast-moving AI providers go stale quickly** — this project hit `gemini-1.5-flash` and `gemini-2.5-flash` both returning 404 (retired) during development, and settled on `gemini-3.1-flash-lite` with a retry-with-backoff for transient `503` overload errors, matching a pattern already proven in a sibling project. Worth re-checking model availability if this is run much later than it was built.
+
+## Built with Claude Code
+
+This project was built collaboratively with [Claude Code](https://claude.com/claude-code), working through the architecture, schema, AI integration, and safeguards together rather than generating the app in one pass. Part of that process was catching and correcting issues along the way — a few worth calling out specifically:
+
+- **Audit logging was pulled out into its own append-only table, separate from the refund request record itself**, so every step the system takes on a given request — the policy engine's evaluation, each AI provider attempt (including failures), and the final reconciliation — is logged individually with its own reasoning, rather than the request only holding one final summary.
+- **The final-sale/clearance exclusion was moved from the order level down to the individual order item.** In a real store, a single order can mix a clearance item with a regular one — final-sale is a property of a specific product, not the whole order — so the original order-level flag was corrected to live on `OrderItem` instead.
+- **Prisma was used as the ORM** specifically to avoid hand-writing and maintaining raw SQL migrations for the schema.
+- **`policyOutput`, `aiOutput`, and audit log detail were changed from normalized database columns to raw JSON snapshots**, so the admin view always shows exactly what each pipeline stage produced, unmodified, without needing a migration every time that shape evolves.
 
 ## Local development without Docker
 
