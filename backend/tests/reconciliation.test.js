@@ -82,6 +82,16 @@ describe("reconcileDecision", () => {
     expect(result.overrideReason).toBe("not_eligible_for_approval");
   });
 
+  it("escalates rather than trusting an unexplained denial when everything else supports approval (mirror of the safeguard above)", () => {
+    const result = reconcileDecision({
+      policyResult: eligiblePolicyResult,
+      aiResult: { ...confidentApprovedAi, decision: "DENIED" },
+      policy,
+    });
+    expect(result.finalDecision).toBe("ESCALATED");
+    expect(result.overrideReason).toBe("unexplained_denial");
+  });
+
   it("passes through the AI's own decision when nothing overrides it", () => {
     const result = reconcileDecision({
       policyResult: eligiblePolicyResult,
@@ -92,16 +102,6 @@ describe("reconcileDecision", () => {
     expect(result.overrideApplied).toBe(false);
     expect(result.overrideReason).toBeNull();
     expect(result.reasoning).toBe(confidentApprovedAi.reasoning);
-  });
-
-  it("does not apply extra scrutiny to an AI DENIED decision, even when the item is eligible (asymmetric safeguard)", () => {
-    const result = reconcileDecision({
-      policyResult: eligiblePolicyResult,
-      aiResult: { ...confidentApprovedAi, decision: "DENIED" },
-      policy,
-    });
-    expect(result.finalDecision).toBe("DENIED");
-    expect(result.overrideApplied).toBe(false);
   });
 
   it("does not leak the internal fail-safe reasoning text to the customer when the AI is unavailable", () => {
