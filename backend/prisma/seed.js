@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-function daysAgo(n) {
+export function daysAgo(n) {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
 
@@ -10,7 +10,7 @@ function daysAgo(n) {
 // that exercises a specific policy branch, plus realistic filler items with no
 // issue. Order dates are computed relative to "now" (not hardcoded) so the
 // refund-window scenarios (#2, #13) stay valid no matter when this is run.
-const customers = [
+export const customers = [
   {
     name: "Ava Thompson",
     email: "ava.thompson@example.com",
@@ -248,11 +248,17 @@ async function main() {
   console.log("Seed complete.");
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Guarded so importing this file for its data (e.g. seedCoverage.test.js)
+// never runs the seed against a live database — only `node prisma/seed.js`
+// (direct execution) does.
+const isMain = import.meta.url === `file://${process.argv[1]}`;
+if (isMain) {
+  main()
+    .catch((err) => {
+      console.error(err);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
