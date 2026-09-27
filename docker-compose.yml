@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: refunds
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/refunds
+      PORT: 4000
+      LOG_LEVEL: info
+      AI_PRIMARY_PROVIDER: gemini
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      AI_FALLBACK_ENABLED: ${AI_FALLBACK_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_TIMEOUT_MS: 8000
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
