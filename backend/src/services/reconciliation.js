@@ -80,6 +80,21 @@ export function reconcileDecision({ policyResult, aiResult, policy }) {
     };
   }
 
+  // Mirror image of the check above: everything here (consistent claim,
+  // confident, a verified issue backing eligibility) points toward approval,
+  // yet the AI denied it anyway. There's no legitimate basis for that given
+  // what it was shown, so rather than trust an unexplained denial OR
+  // override it into an approval ourselves, we escalate it for a human to
+  // resolve the disagreement.
+  if (aiResult.decision === "DENIED" && policyResult.eligibleForApproval) {
+    return {
+      finalDecision: "ESCALATED",
+      reasoning: `${aiResult.reasoning} We'll follow up with you soon.`,
+      overrideApplied: true,
+      overrideReason: "unexplained_denial",
+    };
+  }
+
   return {
     finalDecision: aiResult.decision,
     reasoning: aiResult.reasoning,
